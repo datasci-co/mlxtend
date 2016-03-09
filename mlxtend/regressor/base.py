@@ -1,7 +1,7 @@
 # Sebastian Raschka 2014-2016
 # mlxtend Machine Learning Library Extensions
 #
-# Base Classifier (Classifier Parent Class)
+# Base Regressor (Regressor Parent Class)
 # Author: Sebastian Raschka <sebastianraschka.com>
 #
 # License: BSD 3 clause
@@ -11,8 +11,8 @@ from sys import stderr
 from time import time
 
 
-class _BaseClassifier(object):
-    """Parent Class Base Classifier"""
+class _BaseRegressor(object):
+    """Parent Class Base Regressor"""
     def __init__(self, print_progress=0):
         self.print_progress = print_progress
 
@@ -103,13 +103,3 @@ class _BaseClassifier(object):
 
         if not len(y) == X.shape[0]:
             raise ValueError('X and y must contain the same number of samples')
-
-    def _init_weights(self, shape, zero_init_weight=False, dtype='float64', seed=None):
-        """Initialize weight coefficients."""
-        if seed:
-            np.random.seed(seed)
-        if zero_init_weight:
-            w = np.zeros(shape)
-        else:
-            w = np.random.normal(loc=0.0, scale=1.0, size=shape)
-        return w.astype(dtype)

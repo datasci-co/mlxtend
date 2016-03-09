@@ -4,12 +4,16 @@
 
 ### Version 0.3.1dev
 
+- New `StackingRegressor` ([`regressor.StackingRegressor`](./user_guide/regressor/StackingRegressor.md))
+- New `StackingClassifier` ([`classifier.StackingClassifier`](./user_guide/classifier/StackingClassifier.md))
 - New function for one-hot encoding of class labels ([`preprocessing.one_hot`](./user_guide/preprocessing/one-hot_encoding.md))
+- Added `GridSearch` support to the `SequentialFeatureSelector` ([`feature_selection/.SequentialFeatureSelector`](./user_guide/feature_selection/SequentialFeatureSelector.md))
 - [`evaluate.plot_decision_regions`](./user_guide/evaluate/plot_decision_regions.md) improvements:
   - Function now handles class y-class labels correctly if array is of type `float`
   - Correct handling of input arguments `markers` and `colors`
   - Accept an existing `Axes` via the `ax` argument
 - New `print_progress` parameter for all generalized models and multi-layer neural networks for printing time elapsed, ETA, and the current cost of the current epoch
+- Minibatch learning for `classifier.LogisticRegression`, `classifier.Adaline`, and `regressor.LinearRegression` plus streamlined API
 
 ### Version 0.3.0 (2016-01-31)
 

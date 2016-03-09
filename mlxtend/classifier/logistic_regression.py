@@ -20,23 +20,24 @@ class LogisticRegression(_BaseClassifier):
         Learning rate (between 0.0 and 1.0)
     epochs : int (default: 50)
         Passes over the training dataset.
-    learning : str (default: sgd)
-        Learning rule, sgd (stochastic gradient descent)
-        or gd (gradient descent).
     regularization : {None, 'l2'} (default: None)
         Type of regularization. No regularization if
         `regularization=None`.
     l2_lambda : float
         Regularization parameter for L2 regularization.
         No regularization if l2_lambda=0.0.
-    shuffle : bool (default: False)
-        Shuffles training data every epoch if True to prevent circles.
+    minibatches : int (default: 1)
+        Divide the training data into *k* minibatches
+        for accelerated stochastic gradient descent learning.
+        Gradient Descent Learning if `minibatches` = 1
+        Stochastic Gradient Descent learning if `minibatches` = len(y)
+        Minibatch learning if `minibatches` > 1
     random_seed : int (default: None)
         Set random state for shuffling and initializing the weights.
     zero_init_weight : bool (default: False)
         If True, weights are initialized to zero instead of small random
-        numbers in the interval [-0.1, 0.1];
-        ignored if solver='normal equation'
+        numbers following a standard normal distribution with mean=0 and
+        stddev=1.
     print_progress : int (default: 0)
         Prints progress in fitting to stderr.
         0: No output
@@ -54,22 +55,18 @@ class LogisticRegression(_BaseClassifier):
 
     """
     def __init__(self, eta=0.01, epochs=50, regularization=None,
-                 l2_lambda=0.0, learning='sgd', shuffle=False,
+                 l2_lambda=0.0, minibatches=1,
                  random_seed=None, zero_init_weight=False,
                  print_progress=0):
 
         super(LogisticRegression, self).__init__(print_progress=print_progress)
-        np.random.seed(random_seed)
+        self.random_seed = random_seed
         self.eta = eta
         self.epochs = epochs
         self.l2_lambda = l2_lambda
-        self.shuffle = shuffle
+        self.minibatches = minibatches
         self.regularization = regularization
         self.zero_init_weight = zero_init_weight
-
-        if learning not in ('sgd', 'gd'):
-            raise ValueError('learning must be sgd or gd')
-        self.learning = learning
 
         if self.regularization not in (None, 'l2'):
             raise AttributeError('regularization must be None or "l2"')
@@ -97,37 +94,28 @@ class LogisticRegression(_BaseClassifier):
         if (np.unique(y) != np.array([0, 1])).all():
             raise ValueError('Supports only binary class labels 0 and 1')
 
-        # initialize weights
-        if not isinstance(init_weights, np.ndarray):
-            self._init_weights(shape=1 + X.shape[1])
-        else:
-            self.w_ = init_weights
+        if init_weights:
+            self.w_ = self._init_weights(shape=1 + X.shape[1],
+                                         zero_init_weight=self.zero_init_weight,
+                                         seed=self.random_seed)
 
         self.m_ = len(self.w_)
         self.cost_ = []
 
+        n_idx = list(range(y.shape[0]))
         self.init_time_ = time()
         for i in range(self.epochs):
-
-            if self.shuffle:
+            if self.minibatches > 1:
                 X, y = self._shuffle(X, y)
 
-            if self.learning == 'gd':
-                y_val = self.activation(X)
-                errors = (y - y_val)
-                neg_grad = X.T.dot(errors)
+            minis = np.array_split(n_idx, self.minibatches)
+            for idx in minis:
+                y_val = self.activation(X[idx])
+                errors = (y[idx] - y_val)
+                neg_grad = X[idx].T.dot(errors)
                 l2_reg = self.l2_lambda * self.w_[1:]
                 self.w_[1:] += self.eta * (neg_grad - l2_reg)
                 self.w_[0] += self.eta * errors.sum()
-
-            elif self.learning == 'sgd':
-                for xi, yi in zip(X, y):
-                    yi_val = self.activation(xi)
-                    error = (yi - yi_val)
-                    neg_grad = xi.dot(error)
-                    l2_reg = self.l2_lambda * self.w_[1:]
-                    self.w_[1:] += self.eta * (neg_grad - l2_reg)
-                    self.w_[0] += self.eta * error
 
             cost = self._logit_cost(y, self.activation(X))
             self.cost_.append(cost)
@@ -170,11 +158,3 @@ class LogisticRegression(_BaseClassifier):
     def _sigmoid(self, z):
         """Compute the output of the logistic sigmoid function."""
         return 1.0 / (1.0 + np.exp(-z))
-
-    def _init_weights(self, shape):
-        """Initialize weight coefficients of the model."""
-        if self.zero_init_weight:
-            self.w_ = np.zeros(shape)
-        else:
-            self.w_ = 0.2 * np.random.ranf(shape) - 0.5
-        self.w_.astype('float64')
